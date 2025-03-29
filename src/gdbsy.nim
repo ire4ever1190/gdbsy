@@ -1,21 +1,29 @@
 {.used.}
 
-import std/[paths, os]
+import std/[paths, os, strutils, strformat, macros]
 
-proc includeGDBScript(file: static[Path]) =
-  const tmp = $file
-  asm """
-  .pushsection ".debug_gdb_scripts", "MS",@progbits,1
-  .byte 1 /* Python */
-  .asciz "`tmp`"
-  .popsection
-  """
+macro includeGDBScripts(files: static[seq[Path]]): untyped =
+  # Generate the list of null terminated paths
+
+  var sectionRows = newSeq[string]()
+  for file in files:
+    sectionRows &= ".byte 1" # Python
+    sectionRows &= ".asciz \"" & $file & "\""
+  let allEntries = sectionRows.join("\n")
+  let asmCode = fmt"""
+.pushsection ".debug_gdb_scripts", "MS",@progbits,1
+{allEntries}
+.popsection
+"""
+  return nnkAsmStmt.newTree(newEmptyNode(), newLit asmCode)
 
 # Include the pretty printers shipped with the compiler
 const upstreamScript = Path(getCurrentCompilerExe()) / Path"../.." / Path"tools/debug/nim-gdb.py"
-includeGDBScript upstreamScript
 
 # Include our extra snippets
 const extras = Path(currentSourcePath()).parentDir() / Path"gdbsy.py"
-includeGDBScript extras
 
+includeGDBScripts @[
+  upstreamScript,
+  extras,
+]
