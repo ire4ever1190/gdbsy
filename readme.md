@@ -4,4 +4,5 @@ To run, just compile with your code with `--debugger:native --import:gdbsy`. Cur
 When you run GDB it will mention about autopaths, in my `~/gdbinit` file I have this, but I recommend narrowing it to the file for security reasons
 ```
 add-auto-load-safe-path ~/.nimble/pkgs2/
+add-auto-load-safe-path ~/.choosenim/toolchains
 ```

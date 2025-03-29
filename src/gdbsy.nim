@@ -1,13 +1,21 @@
 {.used.}
 
-import std/paths
+import std/[paths, os]
 
-const fileLocation = Path(currentSourcePath()).parentDir() / Path"gdbsy.py"
+proc includeGDBScript(file: static[Path]) =
+  const tmp = $file
+  asm """
+  .pushsection ".debug_gdb_scripts", "MS",@progbits,1
+  .byte 1 /* Python */
+  .asciz "`tmp`"
+  .popsection
+  """
 
+# Include the pretty printers shipped with the compiler
+const upstreamScript = Path(getCurrentCompilerExe()) / Path"../.." / Path"tools/debug/nim-gdb.py"
+includeGDBScript upstreamScript
 
-asm """
-.pushsection ".debug_gdb_scripts", "MS",@progbits,1
-.byte 1 /* Python */
-.asciz "`fileLocation`"
-.popsection
-"""
+# Include our extra snippets
+const extras = Path(currentSourcePath()).parentDir() / Path"gdbsy.py"
+includeGDBScript extras
+
