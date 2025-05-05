@@ -1,6 +1,7 @@
 import gdb
 import re
-from gdb.FrameDecorator import FrameDecorator
+from gdb.FrameDecorator import
+from gdb.xmethod import XMethodMatcher, XMethod
 
 DEMANGLE_REGEX = re.compile(r"_p\d+")
 
@@ -12,6 +13,7 @@ class SymValueWrapper():
         self.frame = frame
 
     def value(self):
+        ## TODO: Dereference if its only a pointer because its a large value
         return self.sym.value(self.frame)
 
     def symbol(self):
@@ -58,14 +60,28 @@ class NimFrameFilter:
     self.enabled = True
     self.priority = 10000
     self.hidden =  {"NimMainInner","NimMain", "main"}
+    gdb.frame_filters[self.name] = self
 
   def filter(self, iterator):
+    gdb.write("filtering")
     for framedecorator in iterator:
       if framedecorator.function() not in self.hidden:
         # For nim functions, we want to demangle the parameters
-        if framedecorator.filename().endswith(".nim"):
+        if framedecorator.filename().endswith(".nim") or True:
           yield NimFrameDecorator(framedecorator)
         else:
           yield framedecorator
 
-gdb.frame_filters["gdbsy-frame-filter"] = NimFrameFilter()
+
+class SeqXMethod(XMethodMatcher):
+  enabled = True
+
+  def __init__(self):
+    super().__init__("SeqXMethod")
+
+  def match(self, typ, name):
+    print(typ)
+
+gdb.xmethod.register_xmethod_matcher(None, SeqXMethod)
+
+NimFrameFilter()
